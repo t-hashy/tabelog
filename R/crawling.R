@@ -1,78 +1,98 @@
 # Loading --------
-source("global.R")
+source("./R/global.R")
 
-# Generate function ---------------
-get_tablelog.data <- function(pref = "all"){
-  
-  # Set environment --------
-  conf <- config::get()
-  
-  # Get numbers of the restaurants and restaurants per page--------
-  
-  # Get top page contents
-  url <- ifelse(
-    pref == "all",
-    paste(conf$URL_BASE,conf$URL_LIST, sep = ""),
-    paste(conf$URL_BASE, pref, "/", conf$URL_LIST, sep = "")
+
+# List of prefectures -------------
+prefectures <- read.csv("./DB/prefectures.csv") %>%
+  reframe(
+    prefecture = stri_match_first(prefecture_en, regex =  "\\w+") %>% tolower() %>% iconv(to ='ASCII//TRANSLIT')
   )
-  html.top <-  read_html(url)
-  
-  # Get restaurants number
-  rests.num <- html.top %>%
+
+time.before <- NULL
+conf <- config::get()
+pb <- create_new_pb(length(prefectures$prefecture))
+for(prefecture.this in prefectures$prefecture){
+
+  # Progress bar
+  pb$tick()
+
+  # Get top page contents
+  url <- paste(conf$URL_BASE, prefecture.this, "/", conf$URL_LIST, sep = "")
+  time.after <- Sys.time()
+  html.this <-  read_html(url)
+  time.diff <- ifelse(is.null(time.before), 5, difftime(time.after, time.before, units = "secs")) %>%
+    as.numeric()
+  time.sleep <- ifelse(time.diff > 5, 0, 5 - time.diff)
+  Sys.sleep(time.sleep)
+  time.before <- Sys.time()
+
+  # Get possible page number
+  prefectures$restaurants[prefectures$prefecture == prefecture.this] <- html.this %>%
     html_nodes(".c-page-count__num strong") %>%
     html_text() %>%
     .[3] %>%
     as.numeric()
-  
-  # Get possible page number
-  rests.num.per.page <- html.top %>%
-    html_nodes(".c-page-count__num strong") %>%
-    html_text() %>%
-    .[2] %>%
-    as.numeric()
-  
+
   # Set page number to crawl
-  pages <- ceiling(rests.num/rests.num.per.page)
-  if(pages > conf$MAX_PAGE_NUM){
-    pages <- 20
-  }
-  
-  print(paste("Prefecture:", pref, "Restaurants:", rests.num, "| Pages:", pages))
-  
-  # Crawling each pages ------------
-  
+  prefectures$pages[prefectures$prefecture == prefecture.this] <- ceiling(rests.num.this/rests.num.per.page) %>%
+    min(., conf$MAX_PAGE_NUM)
+}
+
+
+# Generate function per prefecture ---------------
+get_tablelog.data <- function(pref.this = "all", rests.num.this = NULL,  conf = config::get(), rests.num.per.page = 20){
+
+  # Get top page contents
+  url.this <- ifelse(
+    pref.this == "all",
+    paste(conf$URL_BASE,conf$URL_LIST, sep = ""),
+    paste(conf$URL_BASE, pref.this, "/", conf$URL_LIST, sep = "")
+  )
+
+  # Get possible page number
+  pages.this <- ifelse(rests.num.this > conf$MAX_PAGE_NUM, conf$MAX_PAGE_NUM, rests.num.this)
+
+  print(paste("Prefecture:", pref.this, "Restaurants:", rests.num.this, "| Pages:", pages.this))
+
+  # Crawling each pages
+
   # Set basics
   df <- data.frame()
-  
+
   # Crawling
-  pb <- create_new_pb(pages)
-  for(page.this in 1:pages){
-    
+  pb <- create_new_pb(pages.this)
+  time.before <- NULL
+  for(page.this in 1:pages.this){
+
     pb$tick()
-        
+
     # Get html
     tryCatch(
       {
-        Sys.sleep(5)
-        html.this <- read_html(paste(url, page.this, sep = ""))
-        ts.this <- Sys.time()
+        time.after <- Sys.time()
+        html.this <- read_html(paste(url.this, page.this, sep = ""))
+        time.diff <- ifelse(is.null(time.before), 5, difftime(time.after, time.before, units = "secs")) %>%
+          as.numeric()
+        time.sleep <- ifelse(time.diff > 5, 0, 5 - time.diff)
+        Sys.sleep(time.sleep)
+        time.before <- Sys.time()
       },
       error = function(e) {
         paste("ERROR:",e)
         next
-        }
-    ) 
-        
+      }
+    )
+
     # Get restaurants
     nodes.rests <- html.this %>%
       html_nodes("div .list-rst")
-    
+
     # With each restaurant
     for(i in 1:length(nodes.rests)){
-      
+
       # Get node
       nodes.rest <- nodes.rests[i]
-      
+
       # Get contents
       rest.name.this <- nodes.rest  %>%
         html_nodes(".list-rst__rst-name-target") %>%
@@ -82,14 +102,14 @@ get_tablelog.data <- function(pref = "all"){
         html_nodes(".list-rst__rst-name-target") %>%
         html_attr(name = "href") %>%
         as.character()
-      rest.pref.this <- pref
-      if(pref == "all"){
+      rest.pref.this <- pref.this
+      if(pref.this == "all"){
         rest.pref.this <- nodes.rest %>%
           html_nodes(".list-rst__area-genre") %>%
           html_text() %>%
           stri_match(regex = "\\[\\w+\\]") %>%
           stri_match(regex = "\\w+") %>%
-          as.character() 
+          as.character()
       }
       rest.rating.this<- nodes.rest %>%
         html_nodes(".c-rating__val") %>%
@@ -102,7 +122,7 @@ get_tablelog.data <- function(pref = "all"){
         as.numeric()
       if(length(rest.comments.num.this) == 0){
         rest.comments.num.this <- 0
-      } 
+      }
       rest.booked.num.this <- nodes.rest %>%
         html_nodes(".list-rst__save-count-num") %>%
         html_text() %>%
@@ -113,18 +133,18 @@ get_tablelog.data <- function(pref = "all"){
         as.character()
       rest.price.ranges.dinner.this <- rest.price.ranges.this[1]
       rest.price.ranges.lunch.this <- rest.price.ranges.this[2]
-      
+
       # Set uids
       uids <- list()
       if(length(df) > 0){
         uids <- df$uid
       }
-      
+
       # Make df temp
       tryCatch(
         {
           df.this <- data.frame(
-            ts = ts.this,
+            ts = time.after,
             uid = generate_uid(uids),
             page = page.this,
             order = i,
@@ -137,7 +157,7 @@ get_tablelog.data <- function(pref = "all"){
             prefecture = rest.pref.this %>% ifelse(length(.) == 0, "", .),
             url = rest.url.this %>% ifelse(length(.) == 0, "", .)
           )
-          
+
           # Push to the main df
           if(length(df) == 0){
             df <- df.this
@@ -163,24 +183,17 @@ get_tablelog.data <- function(pref = "all"){
       )
     }
   }
-  
+
   return(df)
 }
 
 # Fetch the data ----------------
 
-# List of prefectures in Japan
-prefectures <- read.csv("./DB/prefectures.csv") %>%
-  mutate(
-    pref = stri_match_first(prefecture_en, regex =  "\\w+") %>% tolower() %>% iconv(to ='ASCII//TRANSLIT')
-  ) %>%
-  select(pref)
-
 # Get data for each prefecture
 df.all <- data.frame()
 conn <- dbConnect(SQLite(), "./DB/tabelog.db")
-for(pref.this in prefectures[,1]){
-  df.this <- get_tablelog.data(pref.this)
+for(pref.this in prefectures$prefecture){
+  df.this <- get_tablelog.data(pref.this, rests.num.this = prefectures$restaurants[prefectures$prefecture == pref.this])
   dbWriteTable(conn,"all",df.this, append = TRUE)
   df.all <- rbind(df.all,df.this)
 }
@@ -248,10 +261,8 @@ plot <- ggplot(df.toStats)+
   geom_histogram(
     aes(rate),
     binwidth = 0.01
-  ) + 
+  ) +
   facet_wrap(pref.agggr)
 plotly(plot)
 
-
-# Recover -----------------
 

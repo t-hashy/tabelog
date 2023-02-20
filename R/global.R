@@ -3,10 +3,10 @@
 # Create loading function
 # Create loading function
 load.pkg <- function(pkg, install.only = FALSE, install.available = TRUE) {
-  
+
   # Install the package
   if(!pkg %in% library()$results[,1]){
-    
+
     if(install.available){
       install.packages(pkg)
       library(pkg, character.only = TRUE)
@@ -15,7 +15,7 @@ load.pkg <- function(pkg, install.only = FALSE, install.available = TRUE) {
       message(paste(pkg, "has not been installed, however not done because the argument of 'install.avairable' is FALSE. "))
       return("LOAD ERROR")
     }
-    
+
   }else{
     if(!pkg %in% (.packages())){
       library(pkg, character.only = TRUE)
@@ -31,7 +31,7 @@ load.pkg <- function(pkg, install.only = FALSE, install.available = TRUE) {
 ## Set up
 load.pkg("usethis") # Set up and file creations
 load.pkg("renv") # Create renv folder
-load.pkg("config") # Create confifguration file 
+load.pkg("config") # Create confifguration file
 
 # Coding
 load.pkg("progress") # Show a progress bar
@@ -90,10 +90,10 @@ create_new_pb <- function(length)  {
 
 # Generate uid
 generate_uid <- function(current.uids = list(), chr.length = 8){
-  
+
   # Set basics
   characters <- c(LETTERS, letters, 0:9)
-  
+
   # Generate new uid
   new.uid <- NULL
   duplication.check <- TRUE
@@ -110,8 +110,8 @@ generate_uid <- function(current.uids = list(), chr.length = 8){
       duplication.check <- FALSE
     }
   }
-  
+
   # Return new uid
   return(new.uid)
-  
+
 }
