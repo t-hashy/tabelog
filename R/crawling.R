@@ -240,13 +240,13 @@ df.toStats$prefecture <- factor(df.toStats$prefecture, prefectures$prefecture[or
 # See the data
 plot <- df.toStats %>%
   mutate(
-    picked  = ifelse((prefecture %in% c("tokyo", "tochigi")),as.character(prefecture), "others") %>%
-      factor(levels = c("tochigi", "tokyo", "others"))
+    pref.edge  = ifelse((prefecture %in% c("tochigi", "tokyo", levels(df.toStats$prefecture)[1:5], levels(df.toStats$prefecture)[42:47])),as.character(prefecture), "others") %>%
+      factor(levels = c("tochigi", "tokyo", levels(df.toStats$prefecture)[1:5], "others", levels(df.toStats$prefecture)[42:47]) %>% .[!duplicated(.)])
   ) %>%
-  ggplot() +
-  geom_boxplot(aes(prefecture, rate, color = picked)) +
+  ggplot(aes(prefecture, rate)) +
+  geom_boxplot(aes(color = pref.edge)) +
   scale_color_manual(
-    name = "",
+    name = "Prefectures",
     values = c(
       "tokyo" = "darkblue",
       "tochigi" = "darkred",
