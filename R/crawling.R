@@ -37,7 +37,9 @@ for(prefecture.this in prefectures$prefecture){
   prefectures$pages[prefectures$prefecture == prefecture.this] <- ceiling(rests.num.this/rests.num.per.page) %>%
     min(., conf$MAX_PAGE_NUM)
 }
-
+# Save the data
+conn <- dbConnect(SQLite(), "./DB/tabelog.db")
+dbWriteTable(conn,"prefectures", prefectures, overwrite = TRUE)
 
 # Generate function per prefecture ---------------
 get_tablelog.data <- function(pref.this = "all", rests.num.this = NULL,  conf = config::get(), rests.num.per.page = 20){
@@ -78,8 +80,7 @@ get_tablelog.data <- function(pref.this = "all", rests.num.this = NULL,  conf = 
         time.before <- Sys.time()
       },
       error = function(e) {
-        paste("ERROR:",e)
-        next
+        print(paste("ERROR in top:",e))
       }
     )
 
@@ -166,7 +167,7 @@ get_tablelog.data <- function(pref.this = "all", rests.num.this = NULL,  conf = 
           }
         },
         error = function(e) {
-          print(paste("ERROR:",e))
+          print(paste("ERROR in page:",e))
           print(
             c(
               rest.name.this,
@@ -197,7 +198,7 @@ for(pref.this in prefectures$prefecture){
   dbWriteTable(conn,"all",df.this, append = TRUE)
   df.all <- rbind(df.all,df.this)
 }
-
+##
 # Shape the data --------
 
 # # Add prefecture column
