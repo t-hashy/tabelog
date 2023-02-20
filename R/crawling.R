@@ -208,20 +208,16 @@ for(pref.this in prefectures$prefecture){
 #   )
 
 # Duplicatoin check
-df.shaped <- df.shaped[!duplicated(df.shaped %>% select(!uid)),] %>%
+df <- df.all[!duplicated(df.all %>% select(!uid)),] %>%
   mutate(
-    rate = ifelse(rate == 0, NA, rate),
+    price.dinner = as.factor(price.dinner),
+    price.lunch = as.factor(price.lunch),
     prefecture = as.factor(prefecture)
   )
- df.shaped %>%
-  group_by(prefecture) %>%
-  summarise(
-    pref.count = n()
-  ) %>%
-   order_by(pref.count, )
-  mutate(
-    dist = cum_dist(pref.count)
-  )
+
+# Slect only for stats
+df.toStats <- df %>%
+  select(!c(uid, ts, place, url))
 
 # Make price ranges as ordered factor
 
