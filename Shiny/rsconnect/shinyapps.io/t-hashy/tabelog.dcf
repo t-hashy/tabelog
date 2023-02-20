@@ -5,9 +5,9 @@ account: t-hashy
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 8361421
-bundleId: 6866975
+bundleId: 6867023
 url: https://t-hashy.shinyapps.io/tabelog/
-when: 1676911206.95481
-lastSyncTime: 1676911206.95483
+when: 1676912107.7615
+lastSyncTime: 1676912107.76152
 asMultiple: FALSE
 asStatic: FALSE

@@ -132,15 +132,15 @@ server <- function(input, output, session) {
           factor(levels = top.prefs )
       ) %>%
       ggplot(aes(prefecture, rate)) +
-      geom_boxplot(aes(color = pref.edge)) +
+      geom_boxplot(aes(color = pref.edge), notch = TRUE, varwidth = TRUE, show.legend = FALSE) +
       scale_color_manual(
-        name = "Prefectures",
         values = c(
           "tokyo" = "darkblue",
           "tochigi" = "darkred",
           "others" = "gray"
         )
       ) +
+      xlab(NULL) +
       geom_hline(yintercept =  mean(input$plt.mean.sldr)) +
       coord_flip()
 
