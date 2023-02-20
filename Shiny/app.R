@@ -141,6 +141,9 @@ server <- function(input, output, session) {
         )
       ) +
       xlab(NULL) +
+      theme(
+        legend.position = "none"
+      ) +
       geom_hline(yintercept =  mean(input$plt.mean.sldr)) +
       coord_flip()
 
@@ -149,11 +152,11 @@ server <- function(input, output, session) {
   })
 
   output$tbl.rates <- renderDataTable({
-    datatable(df.this, filter = "top")
+    datatable(df.this, filter = "top", options = list(pageLength = 20, scrollY = TRUE))
   })
 
   output$tbl.prefs  <- renderDataTable({
-    datatable(prefs, filter = "top")
+    datatable(prefs, filter = "top", options = list(pageLength = 50, scrollY = TRUE))
   })
 }
 
