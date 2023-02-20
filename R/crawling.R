@@ -219,6 +219,43 @@ df <- df.all[!duplicated(df.all %>% select(!uid)),] %>%
 df.toStats <- df %>%
   select(!c(uid, ts, place, url))
 
+# Add tirm mean value
+prefectures$rate.trimmean <- unlist(
+  map(prefectures$prefecture, function(pref){
+      rates.this <- df %>%
+        filter(
+          prefecture == pref
+        )
+      rate.trimmean <- mean(rates.this$rate, na.rm = TRUE, trim = 0.05)
+      return(rate.trimmean)
+    })
+  )
+df.toStats$pref.trimmean <-  unlist(
+  map(df.toStats$prefecture, function(pref){
+      value <- prefectures$rate.trimmean[prefectures$prefecture == pref]
+    })
+  )
+df.toStats$prefecture <- factor(df.toStats$prefecture, prefectures$prefecture[order(-prefectures$rate.trimmean)])
+
+# See the data
+plot <- df.toStats %>%
+  mutate(
+    picked  = ifelse((prefecture %in% c("tokyo", "tochigi")),as.character(prefecture), "others") %>%
+      factor(levels = c("tochigi", "tokyo", "others"))
+  ) %>%
+  ggplot() +
+  geom_boxplot(aes(prefecture, rate, color = picked)) +
+  scale_color_manual(
+    name = "",
+    values = c(
+      "tokyo" = "darkblue",
+      "tochigi" = "darkred",
+      "others" = "gray"
+    )
+  ) +
+  geom_hline(yintercept =  mean(df.toStats$rate, na.rm = TRUE, trim = 0.05)) +
+  annotate("text", x = 46, y = mean(df.toStats$rate, na.rm = TRUE, trim = 0.02) + 0.05, size = 3, label = "total mean")
+ggplotly(plot)
 # Make price ranges as ordered factor
 
 
