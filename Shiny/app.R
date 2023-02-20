@@ -14,18 +14,46 @@ library(DBI) # Data base management
 library(RSQLite) # SQLite
 
 # Pre-process ----------
+
+# Connect a data base
 conn <- dbConnect(SQLite(), "tabelog.db")
 tbls <- dbListTables(conn)
+
+# Fetch the prefectures
 statement <- sqlInterpolate(
   conn,
   "
-      select prefecture, mean
+      select prefecture, mean, restaurants
       from 'prefectures'
       "
 )
 res <- dbSendQuery(conn,statement)
 prefs <- dbFetch(res)
 dbClearResult(res)
+
+# Set levels
+lvls <- prefs$prefecture[order(-prefs$mean)]
+prefs$prefecture <- factor(prefs$prefecture, lvls)
+
+# Fetch the rating
+statement <- sqlInterpolate(
+  conn,
+  "
+      select prefecture, place, rate, price_dinner, price_lunch, comments, bookmarks, url
+      from 'all'
+      where
+        rate is not null
+      "
+)
+res <- dbSendQuery(conn, statement)
+df.this <- dbFetch(res) %>%
+  mutate(
+    prefecture = factor(prefecture, lvls),
+    price_dinner = factor(price_dinner, unique(price_dinner)),
+    price_lunch = factor(price_lunch, unique(price_lunch))
+  )
+dbClearResult(res)
+##
 
 # ui -----------
 ui <- navbarPage(
@@ -37,8 +65,8 @@ ui <- navbarPage(
       pickerInput(
         "plt.pref.slc",
         label = "PREFECTURES",
-        choices = prefs$prefecture,
-        selected = prefs$prefecture,
+        choices = as.character(prefs$prefecture),
+        selected = as.character(prefs$prefecture),
         multiple = TRUE,
         options = list(`actions-box` = TRUE)
       ),
@@ -78,54 +106,22 @@ server <- function(input, output, session) {
 
   output$plot <- renderPlotly({
 
-    # Fetch the rating
-    statement <- sqlInterpolate(
-      conn,
-      "
-      select rate, prefecture
-      from 'all'
-      where
-        rate is not null
-      "
-    )
-    res <- dbSendQuery(conn, statement)
-    df.this <- dbFetch(res)
-    dbClearResult(res)
-
     # Fetch the prefecture
-    statement <- sqlInterpolate(
-      conn,
-      "
-      select prefecture, mean
-      from 'prefectures'
-      where
-        mean between ?min and ?max
-      ",
-      min = input$plt.mean.sldr[1],
-      max = input$plt.mean.sldr[2]
-    )
-    res <- dbSendQuery(conn,statement)
-    prefs.this <- dbFetch(res)
-    dbClearResult(res)
-
-    # Arrange the data
-    prefs.selected <- input$plt.pref.slc
-    prefs.this <- prefs.this %>%
+    prefs.this <- prefs %>%
       filter(
-        prefecture %in% prefs.selected
+        mean >= input$plt.mean.sldr[1],
+        mean <= input$plt.mean.sldr[2],
+        prefecture %in% input$plt.pref.slc
       )
+
+    # Fetch the data
     df.this <- df.this %>%
       filter(
         prefecture %in% prefs.this$prefecture
       )
 
-    # factorise
-    df.this$prefecture <- factor(df.this$prefecture, prefs.this$prefecture[order(-prefs.this$mean)])
-
-
     # Get the length
-    lvls <- levels(df.this$prefecture)
-    len <- length(lvls)
+    len <- length(prefs.this$prefecture)
     top.prefs <- c("tochigi", "tokyo", lvls[1:min(5,len)], "others", lvls[max(len-4,1):len]) %>%
       .[!duplicated(.)]
 
@@ -153,37 +149,11 @@ server <- function(input, output, session) {
   })
 
   output$tbl.rates <- renderDataTable({
-
-    # Fetch the rating
-    statement <- sqlInterpolate(
-      conn,
-      "
-      select prefecture, place, rate, price_dinner, price_lunch, comments, bookmarks, url
-      from 'all'
-      "
-    )
-    res <- dbSendQuery(conn, statement)
-    df.this <- dbFetch(res)
-    dbClearResult(res)
-
     datatable(df.this, filter = "top")
   })
 
   output$tbl.prefs  <- renderDataTable({
-
-    # Fetch the prefecture
-    statement <- sqlInterpolate(
-      conn,
-      "
-      select prefecture, restaurants, mean as rate_mean
-      from 'prefectures'
-      "
-    )
-    res <- dbSendQuery(conn,statement)
-    prefs.this <- dbFetch(res)
-    dbClearResult(res)
-
-    datatable(prefs.this, filter = "top")
+    datatable(prefs, filter = "top")
   })
 }
 
