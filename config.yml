@@ -2,3 +2,5 @@ default:
   URL_BASE: "https://tabelog.com/"
   URL_LIST: "rstLst/"
   MAX_PAGE_NUM: 20
+  SQLITE:
+    PATH: "DB/tabelog.db"

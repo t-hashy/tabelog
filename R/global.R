@@ -59,11 +59,18 @@ load.pkg("stringi") # String manipulation
 # Data visualization
 load.pkg("ggplot2") # Plotting
 load.pkg("plotly") # Interactive plotting
+load.pkg("ggpubr") # Show multiple ggplot in one window
+# if(!require(devtools)) install.packages("devtools")
+# devtools::install_github("kassambara/ggpubr")
 load.pkg("GGally") # Variables
 load.pkg("DataExplorer") # Create data summary report
 
 # Google
 load.pkg("googlesheets4")
+
+# Statics
+load.pkg("DescTools") # Correlation between factors
+load.pkg("scales") # Rich scaling e.g. comma separated labels
 
 # # Text mining
 # if(!"RMeCab" %in% library()$results[,1]){
