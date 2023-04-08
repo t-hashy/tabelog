@@ -57,6 +57,7 @@ load.pkg("DT") # Interactive data table
 load.pkg("stringi") # String manipulation
 
 # Data visualization
+load.pkg("ggthemes") # Rich plot themes
 load.pkg("ggplot2") # Plotting
 load.pkg("plotly") # Interactive plotting
 load.pkg("ggpubr") # Show multiple ggplot in one window

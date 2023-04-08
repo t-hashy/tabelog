@@ -127,14 +127,18 @@ rate.mean <- predict(model, newdata = new.df) |> as.vector()
 df <- cbind(new.df, rate)
 
 ggplot(df, aes(x = price.lunch.mid, y = price.dinner.mid, z = rate.mean)) +
+  geom_contour_filled(na.rm = TRUE, binwidth = 0.01)+
+
   labs(
     x = "lunch price",
     y = "dinner price",
     fill = "rate (mean)",
     title = "TABELOG RATING MAP",
+    subtitle = "( < 10,000yen )",
     caption = "Results has been predicated by tabelog site data."
   ) +
-  theme_classic(base_size = 8) +
+  # ggthemes::theme_clean() +
+  theme_classic(base_size = 10) +
   theme(
     plot.title = element_text(
       face = "bold",
@@ -142,13 +146,38 @@ ggplot(df, aes(x = price.lunch.mid, y = price.dinner.mid, z = rate.mean)) +
       hjust = 0.5,
       vjust = 0.5
     ),
-    legend.position = c(0.9, 0.5),
+    plot.subtitle = element_text(
+      face = "italic",
+      size = 10,
+      hjust = 0.5
+    ),
+    legend.position = c(0.8,0.5),
     legend.background = element_rect(fill = rgb(1,1,1,0.6)),
     axis.text.x = element_text(
-      hjust = 0.5,
+      hjust = 0.9,
       vjust = 1
-    )
+    ),
+    panel.grid = element_blank(),
+    panel.border = element_blank()
   ) +
-  scale_x_continuous(labels = comma) +
-  scale_y_continuous(labels = comma) +
-  geom_contour_filled(na.rm = TRUE, binwidth = 0.1)
+  scale_x_continuous(labels = comma, limits = c(0, 10000), n.breaks = 10, expand = expansion()) +
+  scale_y_continuous(labels = comma, limits = c(0,10000), n.breaks = 10, expand = expansion())
+
+### Scatter with confidence interval ----
+ggplot(
+  data.fcts |> filter(price.dinner.mid < quantile(price.dinner.mid, na.rm = TRUE, probs = 0.95)),
+  aes(
+    x = price.lunch.mid,
+    y = price.dinner.mid,
+    colour = rate
+  )) +
+  geom_point(na.rm = TRUE) +
+  geom_smooth(na.rm = TRUE) +
+  stat_cor(na.rm = TRUE) +
+  labs(
+    x = "lunch price",
+    y = "dinner price"
+  ) +
+  theme_classic() +
+  scale_x_continuous(labels = comma, n.breaks = 20) +
+  scale_y_continuous(labels = comma, n.breaks = 20)
